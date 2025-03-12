@@ -37,9 +37,10 @@ user_input = {}
 # Categorical Inputs (Dropdown in Sidebar)
 for feature in categorical_input_features:
     if feature in label_encoders:  # Ensure encoder exists
-        options = [opt for opt in label_encoders[feature].classes_ if opt.strip() != "?"]  # Remove "?" from options
+        options = label_encoders[feature].classes_
+        options = [opt for opt in options if opt.strip() != "?"]  # Remove "?" from options
         if options:  # Ensure there are valid options
-            selected_value = st.sidebar.selectbox(f"{feature.replace('_', ' ').capitalize()}:", options)
+            selected_value = st.sidebar.selectbox(f"{feature.replace('_', ' ').capitalize()}", options)
             encoded_value = label_encoders[feature].transform([selected_value])[0]  # Encode selected value
             user_input[feature] = encoded_value
 
