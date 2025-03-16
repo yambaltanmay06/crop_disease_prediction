@@ -14,12 +14,9 @@ with open("categorical_features.pkl", "rb") as file:
     categorical_features = pickle.load(file)
 
 # Load Best Trained Model
-try:
-    with open("best_model.pkl", "rb") as file:
+with open("best_model.pkl", "rb") as file:
         model = pickle.load(file)
-except FileNotFoundError:
-    st.error("⚠ Model file not found! Train and save the model first.")
-    st.stop()
+
 
 # Identify relevant categorical input features (excluding disease_type) 
 selected_features = processed_data.drop(columns=["disease_type"]).columns.tolist()
