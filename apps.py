@@ -2,6 +2,8 @@ import streamlit as st
 import pickle
 import pandas as pd
 import numpy as np
+from PIL import Image
+import os
 
 # Load Processed Data & Label Encoders
 with open("processed_data.pkl", "rb") as file:
@@ -15,14 +17,12 @@ with open("categorical_features.pkl", "rb") as file:
 
 # Load Best Trained Model
 with open("best_model.pkl", "rb") as file:
-        model = pickle.load(file)
+    model = pickle.load(file)
 
-
-# Identify relevant categorical input features (excluding disease_type) 
+# Identify relevant categorical input features
 selected_features = processed_data.drop(columns=["disease_type"]).columns.tolist()
 categorical_input_features = [col for col in categorical_features if col in selected_features]
 
-# Human-readable value mappings
 readable_value_mappings = {
     "season": {'october': 'October', 'august': 'August', 'july': 'July', 'september': 'September',
                 'may': 'May', 'april': 'April', 'june': 'June', '?': 'Unknown'},
@@ -45,44 +45,72 @@ readable_value_mappings = {
     "lesion_size": {' brown': 'Brown', ' dna': 'DNA', ' tan': 'Tan', ' dk-brown-blk': 'Dark Brown to Black'},
 }
 
+disease_image_mapping = {
+    " diaporthe-stem-canker": r"images/Diaporthe Stem Canker.jpg",
+    " charcoal-rot": r"images/charcol rot.jpg",
+    " rhizoctonia-root-rot": r"images/rhizoctonia root rot.jpg",
+    " phytophthora-rot": r"images/phytophthora root.jpg",
+    " brown-stem-rot": r"images/Brown Stem Rot.jpg",
+    " powdery-mildew": r"images/Powdery Mildew.jpg",
+    " downy-mildew": r"images/Downy Mildew.jpg",
+    " brown-spot": r"images/Brown Spot.jpg",
+    " bacterial-blight": r"images/Bacterial Blight.jpg",
+    " bacterial-pustule": r"images/Bacterial Pustule.jpg",
+    " purple-seed-stain": r"images/Purple Seed Stain.jpg",
+    " anthracnose": r"images/Anthracnose.jpg",
+    " phyllosticta-leaf-spot": r"images/Phyllosticta Leaf Spot.jpg",
+    " alternarialeaf-spot": r"images/Alternaria Leaf Spot.jpg",
+    " frog-eye-leaf-spot": r"images/Frog Eye Leaf Spot.jpg",
+    " diaporthe-pod-&-stem-blight": r"images/Diaporthe Pod & Stem Blight.jpg",
+    " cyst-nematode": r"images/Cyst Nematode.jpg",
+    " 2-4-d-injury": r"images/2,4-D Injury.jpg",
+    " herbicide-injury": r"images/Herbicide Injury.jpg"
+}
+
 # Streamlit UI
 st.set_page_config(page_title="Soybean Disease Prediction", layout="wide")
 st.title("🌾 Soybean Disease Prediction")
-st.write("Use the sidebar to input feature values and predict the disease.")
+st.write("Enter the input features to predict the disease.")
 
-# Sidebar for User Inputs
-st.sidebar.header("🔍 Input Features")
-user_input = {}
+# Layout for Input & Output
+col1, col2 = st.columns([2, 1])
 
-# Categorical Inputs (Dropdown in Sidebar)
-for feature in categorical_input_features:
-    if feature in label_encoders and feature in readable_value_mappings:  # Ensure encoder and mapping exist
-        options = label_encoders[feature].classes_
-        options = [opt for opt in options if opt.strip() != "?"]  # Remove "?" from options
-        readable_options = [readable_value_mappings[feature].get(opt, opt) for opt in options]
-        selected_value = st.sidebar.selectbox(f"{feature.replace('_', ' ').capitalize()}", readable_options)
-        # Reverse map human-readable selection back to encoded value
-        encoded_value = next(k for k, v in readable_value_mappings[feature].items() if v == selected_value)
-        encoded_value = label_encoders[feature].transform([encoded_value])[0]
-        user_input[feature] = encoded_value
+# Left Side - Input Fields
+with col1:
+    st.subheader("🔍 Input Features")
+    user_input = {}
+    colA, colB = st.columns(2)
+    
+    for idx, feature in enumerate(categorical_input_features):
+        if feature in label_encoders and feature in readable_value_mappings:
+            options = label_encoders[feature].classes_
+            options = [opt for opt in options if opt.strip() != "?"]
+            readable_options = [readable_value_mappings[feature].get(opt, opt) for opt in options]
+            
+            # Distribute input fields in two columns
+            selected_value = (colA if idx % 2 == 0 else colB).selectbox(
+                f"{feature.replace('_', ' ').capitalize()}", readable_options
+            )
+            
+            encoded_value = next(k for k, v in readable_value_mappings[feature].items() if v == selected_value)
+            encoded_value = label_encoders[feature].transform([encoded_value])[0]
+            user_input[feature] = encoded_value
 
 # Convert input to DataFrame
-user_df = pd.DataFrame([user_input])
+user_df = pd.DataFrame([user_input]).reindex(columns=selected_features, fill_value=0)
 
-# Ensure user_df matches model's training features
-missing_features = set(selected_features) - set(user_df.columns)  # Features in training but not in user_df
-
-# Fix missing features
-for feature in missing_features:
-    user_df[feature] = 0  # Fill missing features with neutral values
-
-user_df = user_df[selected_features]  # Ensure correct column order
-
-# Output Section in Center
-col1, col2, col3 = st.columns([1, 2, 1])
+# Right Side - Prediction Output
 with col2:
-    if st.sidebar.button("🚀 Predict Disease"):
-        prediction_encoded = model.predict(user_df)[0]
+    st.subheader("🦠 Prediction Result")
+    if st.button("🚀 Predict Disease"):
+        prediction_encoded = model.predict(user_df.values)[0]
         predicted_disease = label_encoders["disease_type"].inverse_transform([prediction_encoded])[0]
-        st.subheader("🦠 Prediction Result:")
+        
         st.success(f"🛑 Predicted Disease: **{predicted_disease}**")
+        
+        # Display Image
+        image_path = disease_image_mapping.get(predicted_disease, None)
+        if image_path and os.path.exists(image_path):
+            st.image(image_path, caption=predicted_disease, use_container_width=True)
+        else:
+            st.warning("⚠️ Image not found for this disease.")
