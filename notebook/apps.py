@@ -6,17 +6,17 @@ from PIL import Image
 import os
 
 # Load Processed Data & Label Encoders
-with open("processed_data.pkl", "rb") as file:
+with open("pkl\\processed_data.pkl", "rb") as file:
     processed_data = pickle.load(file)
 
-with open("label_encoders.pkl", "rb") as file:
+with open("pkl\\label_encoders.pkl", "rb") as file:
     label_encoders = pickle.load(file)
 
-with open("categorical_features.pkl", "rb") as file:
+with open("pkl\\categorical_features.pkl", "rb") as file:
     categorical_features = pickle.load(file)
 
 # Load Best Trained Model
-with open("best_model.pkl", "rb") as file:
+with open("pkl\\best_model.pkl", "rb") as file:
     model = pickle.load(file)
 
 # Identify relevant categorical input features
@@ -111,6 +111,6 @@ with col2:
         # Display Image
         image_path = disease_image_mapping.get(predicted_disease, None)
         if image_path and os.path.exists(image_path):
-            st.image(image_path, caption=predicted_disease, use_container_width=True)
+            st.image(image_path, caption=predicted_disease, width=600)  # Removed unsupported argument
         else:
             st.warning("⚠️ Image not found for this disease.")
